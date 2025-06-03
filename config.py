@@ -29,8 +29,15 @@ BASE_WALL_COLOR = (139, 69, 19) # A brownish color (SaddleBrown)
 SHADED_WALL_COLOR = tuple(int(c * 0.7) for c in BASE_WALL_COLOR)
 
 # Weapon Settings
-PISTOL_IDLE_IMAGE_PATH = "pistol_idle.png"
-PISTOL_FIRE_IMAGE_PATH = "pistol_fire.png"
-PISTOL_SCALE_FACTOR = 0.5  # Adjust to fit your sprite size
-PISTOL_Y_OFFSET = 10       # Vertical offset from the bottom of the screen
-PISTOL_FIRE_DURATION_MS = 100 # Duration of the firing animation in milliseconds
+PISTOL_IDLE_IMAGE_PATH = "assets/sprites/pistol_idle.png"
+PISTOL_SCALE_FACTOR = 4.0  # Adjust to fit your sprite size
+PISTOL_Y_OFFSET = 0       # Vertical offset from the bottom of the screen
+
+# Pistol Firing Animation Settings
+PISTOL_FIRE_FRAME_PATHS = [
+    "assets/sprites/pistol_fire1.png",
+    "assets/sprites/pistol_fire2.png",
+    "assets/sprites/pistol_fire3.png",
+    "assets/sprites/pistol_fire4.png"
+]
+PISTOL_FIRE_ANIMATION_SPEED_MS = 75 # Milliseconds each frame is displayed

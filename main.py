@@ -12,16 +12,17 @@ player_angle = config.PLAYER_INITIAL_ANGLE
 
 # Weapon state
 pistol_idle_img = None
-pistol_fire_img = None
+pistol_fire_frames = [] # List to hold fire animation frames
 current_pistol_img = None
 pistol_rect = None
 is_firing = False
-pistol_fire_timer_ms = 0
+pistol_animation_timer_ms = 0 # Timer for current frame
+pistol_current_frame_index = 0
 
 def main():
     global player_x, player_y, player_angle
-    global pistol_idle_img, pistol_fire_img, current_pistol_img, pistol_rect
-    global is_firing, pistol_fire_timer_ms
+    global pistol_idle_img, pistol_fire_frames, current_pistol_img, pistol_rect
+    global is_firing, pistol_animation_timer_ms, pistol_current_frame_index
 
     pygame.init()
     screen = graphics.init_screen()
@@ -29,7 +30,11 @@ def main():
 
     # Load weapon graphics
     pistol_idle_img = graphics.load_image(config.PISTOL_IDLE_IMAGE_PATH, config.PISTOL_SCALE_FACTOR)
-    pistol_fire_img = graphics.load_image(config.PISTOL_FIRE_IMAGE_PATH, config.PISTOL_SCALE_FACTOR)
+    pistol_fire_frames = graphics.load_animation_frames(
+        config.PISTOL_FIRE_FRAME_PATHS,
+        scale_factor=config.PISTOL_SCALE_FACTOR,
+        use_alpha=True # Assuming your pistol frames might have transparency
+    )
 
     if pistol_idle_img:
         current_pistol_img = pistol_idle_img
@@ -39,6 +44,8 @@ def main():
     else:
         print("Failed to load pistol idle image. Weapon will not be displayed.")
         # Optionally, exit or run without weapon
+    if not pistol_fire_frames:
+        print(f"Failed to load one or more pistol fire animation frames. Firing animation may be incomplete or disabled.")
 
 
     running = True
@@ -49,11 +56,13 @@ def main():
             if event.type == pygame.QUIT:
                 running = False
             if event.type == pygame.MOUSEBUTTONDOWN:
-                if event.button == 1 and not is_firing and pistol_fire_img: # Left mouse button
+                if event.button == 1 and not is_firing and pistol_fire_frames: # Left mouse button
                     is_firing = True
-                    current_pistol_img = pistol_fire_img
-                    pistol_fire_timer_ms = config.PISTOL_FIRE_DURATION_MS
+                    pistol_current_frame_index = 0
+                    current_pistol_img = pistol_fire_frames[pistol_current_frame_index]
+                    pistol_animation_timer_ms = config.PISTOL_FIRE_ANIMATION_SPEED_MS
                     # Future: Add sound effect here
+                    # Future: Reposition pistol_rect if fire frames have different anchor points than idle
                     # Future: Implement hit detection logic here
 
         # --- Handle Input ---
@@ -89,13 +98,21 @@ def main():
         # --- Update Game State ---
         # Weapon firing animation
         if is_firing:
-            pistol_fire_timer_ms -= dt * 1000 # dt is in seconds, timer is in ms
-            if pistol_fire_timer_ms <= 0:
-                is_firing = False
-                current_pistol_img = pistol_idle_img
-                # Ensure pistol_rect is based on idle image if sizes differ significantly
-                # For now, assuming sizes are similar or visual glitch is minor
+            pistol_animation_timer_ms -= dt * 1000 # dt is in seconds, timer is in ms
+            if pistol_animation_timer_ms <= 0:
+                pistol_current_frame_index += 1
+                if pistol_current_frame_index >= len(pistol_fire_frames):
+                    # Animation finished
+                    is_firing = False
+                    current_pistol_img = pistol_idle_img
+                    pistol_current_frame_index = 0 # Reset for next time
+                else:
+                    # Advance to next frame
+                    current_pistol_img = pistol_fire_frames[pistol_current_frame_index]
+                    pistol_animation_timer_ms = config.PISTOL_FIRE_ANIMATION_SPEED_MS # Reset timer for new frame
 
+                # Note: If idle and fire frames have different scaled dimensions,
+                # pistol_rect might need to be updated here to keep consistent positioning.
         # --- Collision Detection & Position Update ---
         # New potential positions based on intended movement
         potential_new_x = player_x + move_x_component
