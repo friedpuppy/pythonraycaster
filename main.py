@@ -10,9 +10,9 @@ player_x = config.PLAYER_INITIAL_X
 player_y = config.PLAYER_INITIAL_Y
 player_angle = config.PLAYER_INITIAL_ANGLE
 
-# Weapon state
-pistol_idle_img = None
-pistol_fire_frames = [] # List to hold fire animation frames
+# Weapon state (will be populated by graphics.load_all_assets)
+pistol_idle_img = None # Will be graphics.game_assets.get('pistol_idle')
+pistol_fire_frames = [] # Will be graphics.game_assets.get('pistol_fire_frames', [])
 current_pistol_img = None
 pistol_rect = None
 is_firing = False
@@ -25,16 +25,13 @@ def main():
     global is_firing, pistol_animation_timer_ms, pistol_current_frame_index
 
     pygame.init()
-    screen = graphics.init_screen()
+    screen = graphics.init_screen() # Initialize screen FIRST
+    graphics.load_all_assets() # Load all game assets
     clock = pygame.time.Clock()
 
-    # Load weapon graphics
-    pistol_idle_img = graphics.load_image(config.PISTOL_IDLE_IMAGE_PATH, config.PISTOL_SCALE_FACTOR)
-    pistol_fire_frames = graphics.load_animation_frames(
-        config.PISTOL_FIRE_FRAME_PATHS,
-        scale_factor=config.PISTOL_SCALE_FACTOR,
-        use_alpha=True # Assuming your pistol frames might have transparency
-    )
+    # Initialize weapon state from loaded assets
+    pistol_idle_img = graphics.game_assets.get('pistol_idle')
+    pistol_fire_frames = graphics.game_assets.get('pistol_fire_frames', [])
 
     if pistol_idle_img:
         current_pistol_img = pistol_idle_img
@@ -43,7 +40,6 @@ def main():
         pistol_rect.bottom = config.SCREEN_HEIGHT - config.PISTOL_Y_OFFSET
     else:
         print("Failed to load pistol idle image. Weapon will not be displayed.")
-        # Optionally, exit or run without weapon
     if not pistol_fire_frames:
         print(f"Failed to load one or more pistol fire animation frames. Firing animation may be incomplete or disabled.")
 
@@ -216,29 +212,36 @@ def main():
                 # This is done by multiplying the ray's length by cos(angle between ray and player's direction vector).
                 # The angle of the current ray relative to the player's direct line of sight:
                 relative_ray_angle = ray_angle - player_angle
-                # player_angle and ray_angle are normalized, so relative_ray_angle is generally small (within FOV).
-                # math.cos will handle the angle correctly.
-
                 projected_dist = dist_along_ray * math.cos(relative_ray_angle)
 
                 # Prevent division by zero or extremely small projected distances (leading to overly tall walls)
                 if projected_dist <= 0.001: projected_dist = 0.001
 
                 # Calculate height of the wall slice on screen using the projected distance
-                line_height = int(config.SCREEN_HEIGHT / projected_dist)
+                line_height_raw = int(config.SCREEN_HEIGHT / projected_dist) # Unclamped height
 
                 # Calculate lowest and highest pixel to fill in current stripe
-                draw_start = -line_height / 2 + config.SCREEN_HEIGHT / 2
-                if draw_start < 0: draw_start = 0
-                draw_end = line_height / 2 + config.SCREEN_HEIGHT / 2
-                if draw_end >= config.SCREEN_HEIGHT: draw_end = config.SCREEN_HEIGHT - 1
+                draw_start_y_unclamped = -line_height_raw / 2 + config.SCREEN_HEIGHT / 2
+                draw_end_y_unclamped = line_height_raw / 2 + config.SCREEN_HEIGHT / 2
 
-                # Choose wall color (basic shading based on wall orientation)
-                wall_color = config.SHADED_WALL_COLOR if side == 1 else config.BASE_WALL_COLOR
+                clamped_draw_start_y = max(0, int(draw_start_y_unclamped))
+                clamped_draw_end_y = min(config.SCREEN_HEIGHT, int(draw_end_y_unclamped))
+                
+                on_screen_strip_height = clamped_draw_end_y - clamped_draw_start_y
 
-                # Draw the vertical strip representing the wall
-                screen_x_pos = i * config.STRIP_WIDTH
-                graphics.draw_wall_strip(screen, screen_x_pos, draw_start, draw_end, wall_color)
+                if on_screen_strip_height > 0:
+                    # Calculate where the wall was hit (for texture mapping)
+                    wall_hit_coord_on_segment = 0.0
+                    if side == 0: # Vertical wall
+                        wall_hit_coord_on_segment = player_y + dist_along_ray * ray_dir_y # Use dist_along_ray
+                    else: # Horizontal wall
+                        wall_hit_coord_on_segment = player_x + dist_along_ray * ray_dir_x # Use dist_along_ray
+                    wall_hit_coord_on_segment -= math.floor(wall_hit_coord_on_segment) # Get fractional part
+
+                    # Draw the textured wall strip
+                    screen_x_pos = i * config.STRIP_WIDTH
+                    graphics.draw_wall_strip(screen, screen_x_pos, clamped_draw_start_y, on_screen_strip_height,
+                                             wall_hit_coord_on_segment, side, ray_dir_x, ray_dir_y)
 
         # Draw weapon
         graphics.draw_weapon(screen, current_pistol_img, pistol_rect)
