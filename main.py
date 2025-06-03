@@ -10,12 +10,36 @@ player_x = config.PLAYER_INITIAL_X
 player_y = config.PLAYER_INITIAL_Y
 player_angle = config.PLAYER_INITIAL_ANGLE
 
+# Weapon state
+pistol_idle_img = None
+pistol_fire_img = None
+current_pistol_img = None
+pistol_rect = None
+is_firing = False
+pistol_fire_timer_ms = 0
+
 def main():
     global player_x, player_y, player_angle
+    global pistol_idle_img, pistol_fire_img, current_pistol_img, pistol_rect
+    global is_firing, pistol_fire_timer_ms
 
     pygame.init()
     screen = graphics.init_screen()
     clock = pygame.time.Clock()
+
+    # Load weapon graphics
+    pistol_idle_img = graphics.load_image(config.PISTOL_IDLE_IMAGE_PATH, config.PISTOL_SCALE_FACTOR)
+    pistol_fire_img = graphics.load_image(config.PISTOL_FIRE_IMAGE_PATH, config.PISTOL_SCALE_FACTOR)
+
+    if pistol_idle_img:
+        current_pistol_img = pistol_idle_img
+        pistol_rect = current_pistol_img.get_rect()
+        pistol_rect.centerx = config.SCREEN_WIDTH // 2
+        pistol_rect.bottom = config.SCREEN_HEIGHT - config.PISTOL_Y_OFFSET
+    else:
+        print("Failed to load pistol idle image. Weapon will not be displayed.")
+        # Optionally, exit or run without weapon
+
 
     running = True
     while running:
@@ -24,6 +48,13 @@ def main():
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 running = False
+            if event.type == pygame.MOUSEBUTTONDOWN:
+                if event.button == 1 and not is_firing and pistol_fire_img: # Left mouse button
+                    is_firing = True
+                    current_pistol_img = pistol_fire_img
+                    pistol_fire_timer_ms = config.PISTOL_FIRE_DURATION_MS
+                    # Future: Add sound effect here
+                    # Future: Implement hit detection logic here
 
         # --- Handle Input ---
         keys = pygame.key.get_pressed()
@@ -41,13 +72,12 @@ def main():
             move_y_component -= config.MOVE_SPEED * math.sin(player_angle)
 
         # Strafe Left/Right (A/D)
-        strafe_angle_rad = math.pi / 2 # 90 degrees
         if keys[pygame.K_a]: # Strafe Left
-            move_x_component += config.MOVE_SPEED * math.cos(player_angle - strafe_angle_rad)
-            move_y_component += config.MOVE_SPEED * math.sin(player_angle - strafe_angle_rad)
+            move_x_component += config.MOVE_SPEED * math.cos(player_angle - config.STRAFE_ANGLE)
+            move_y_component += config.MOVE_SPEED * math.sin(player_angle - config.STRAFE_ANGLE)
         if keys[pygame.K_d]: # Strafe Right
-            move_x_component += config.MOVE_SPEED * math.cos(player_angle + strafe_angle_rad)
-            move_y_component += config.MOVE_SPEED * math.sin(player_angle + strafe_angle_rad)
+            move_x_component += config.MOVE_SPEED * math.cos(player_angle + config.STRAFE_ANGLE)
+            move_y_component += config.MOVE_SPEED * math.sin(player_angle + config.STRAFE_ANGLE)
 
         # Rotation (Left/Right Arrow Keys)
         if keys[pygame.K_LEFT]:
@@ -55,6 +85,16 @@ def main():
         if keys[pygame.K_RIGHT]:
             player_angle += config.ROT_SPEED
         player_angle = (player_angle + 2 * math.pi) % (2 * math.pi) # Normalize angle to [0, 2*pi)
+
+        # --- Update Game State ---
+        # Weapon firing animation
+        if is_firing:
+            pistol_fire_timer_ms -= dt * 1000 # dt is in seconds, timer is in ms
+            if pistol_fire_timer_ms <= 0:
+                is_firing = False
+                current_pistol_img = pistol_idle_img
+                # Ensure pistol_rect is based on idle image if sizes differ significantly
+                # For now, assuming sizes are similar or visual glitch is minor
 
         # --- Collision Detection & Position Update ---
         # New potential positions based on intended movement
@@ -182,6 +222,9 @@ def main():
                 # Draw the vertical strip representing the wall
                 screen_x_pos = i * config.STRIP_WIDTH
                 graphics.draw_wall_strip(screen, screen_x_pos, draw_start, draw_end, wall_color)
+
+        # Draw weapon
+        graphics.draw_weapon(screen, current_pistol_img, pistol_rect)
 
         pygame.display.flip()
 

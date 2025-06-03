@@ -13,6 +13,7 @@ PLAYER_INITIAL_ANGLE = math.pi / 4  # Initial viewing angle (radians)
 FOV = math.pi / 3  # Field of View (e.g., 60 degrees)
 MOVE_SPEED = 0.05 # Grid units per frame (adjust for faster/slower movement)
 ROT_SPEED = 0.03  # Radians per frame (adjust for faster/slower rotation)
+STRAFE_ANGLE = math.pi / 2 # 90 degrees for strafing
 
 # Raycasting settings
 # NUM_RAYS can be SCREEN_WIDTH for 1-pixel wide strips, or less for wider strips.
@@ -26,3 +27,10 @@ FLOOR_COLOR = (70, 70, 70)     # Dark gray
 BASE_WALL_COLOR = (139, 69, 19) # A brownish color (SaddleBrown)
 # Shaded color for walls facing North/South to give a sense of depth
 SHADED_WALL_COLOR = tuple(int(c * 0.7) for c in BASE_WALL_COLOR)
+
+# Weapon Settings
+PISTOL_IDLE_IMAGE_PATH = "pistol_idle.png"
+PISTOL_FIRE_IMAGE_PATH = "pistol_fire.png"
+PISTOL_SCALE_FACTOR = 0.5  # Adjust to fit your sprite size
+PISTOL_Y_OFFSET = 10       # Vertical offset from the bottom of the screen
+PISTOL_FIRE_DURATION_MS = 100 # Duration of the firing animation in milliseconds
